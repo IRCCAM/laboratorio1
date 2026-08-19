@@ -47,13 +47,30 @@ class FraudPreprocessor:
     def transform(self, df: pd.DataFrame) -> np.ndarray:
         data = self.create_features(df)
 
-        data.loc[:, self.SCALE_COLUMNS] = self.scaler.transform(
+        scaled = self.scaler.transform(
             data[self.SCALE_COLUMNS]
         )
 
-        return data[self.FEATURE_NAMES].to_numpy(dtype="float32")
+        data[self.SCALE_COLUMNS] = scaled.astype("float32")
+
+        return data[self.FEATURE_NAMES].to_numpy(
+            dtype="float32"
+        )
 
     def fit_transform(self, df: pd.DataFrame) -> np.ndarray:
         self.fit(df)
 
         return self.transform(df)
+
+    def process_splits(
+        self,
+        train_df: pd.DataFrame,
+        val_df: pd.DataFrame,
+        test_df: pd.DataFrame,
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+
+        X_train = self.fit_transform(train_df)
+        X_val = self.transform(val_df)
+        X_test = self.transform(test_df)
+
+        return X_train, X_val, X_test
