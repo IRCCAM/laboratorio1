@@ -1,12 +1,15 @@
-"""Seleccion de umbral optimo (F2) y metricas de evaluacion para los modelos de fraude."""
+"""Selección de umbral F2 y evaluación de detectores de fraude."""
 
 from dataclasses import dataclass
 
 import numpy as np
 from sklearn.metrics import (
+    accuracy_score,
     average_precision_score,
+    balanced_accuracy_score,
     confusion_matrix,
     f1_score,
+    fbeta_score,
     matthews_corrcoef,
     precision_recall_curve,
     precision_score,
@@ -15,9 +18,28 @@ from sklearn.metrics import (
 )
 
 
+def _validated_vectors(
+    y_true: np.ndarray,
+    scores: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray]:
+    labels = np.asarray(y_true)
+    values = np.asarray(scores, dtype=float)
+    if labels.ndim != 1 or values.ndim != 1:
+        raise ValueError("y_true y scores deben ser arreglos unidimensionales")
+    if labels.size == 0 or values.size == 0:
+        raise ValueError("y_true y scores no pueden estar vacíos")
+    if labels.shape != values.shape:
+        raise ValueError("y_true y scores deben tener la misma longitud")
+    if not np.isfinite(values).all():
+        raise ValueError("scores contiene valores no finitos")
+    if not set(np.unique(labels)).issubset({0, 1}):
+        raise ValueError("y_true solo puede contener 0 y 1")
+    return labels.astype(np.int32), values
+
+
 @dataclass(frozen=True)
 class ThresholdSelectionResult:
-    """Resultado de buscar el umbral que maximiza F2 sobre un conjunto de validacion."""
+    """Resultado de maximizar F2 sobre validación."""
 
     threshold: float
     f2_score: float
@@ -30,65 +52,70 @@ class ThresholdSelectionResult:
 
 @dataclass(frozen=True)
 class EvaluationMetrics:
-    """Metricas de un modelo evaluadas en un umbral de decision fijo."""
+    """Métricas calculadas con un umbral de decisión fijo."""
 
     name: str
     threshold: float
     accuracy: float
+    balanced_accuracy: float
     precision: float
     recall: float
+    specificity: float
     f1_score: float
     f2_score: float
-    specificity: float
-    mcc: float
     roc_auc: float
     pr_auc: float
+    mcc: float
     true_positives: int
     false_positives: int
-    true_negatives: int
     false_negatives: int
+    true_negatives: int
     false_alerts_per_10k_legit: float
     captured_fraud_amount_pct: float | None = None
 
-    def as_dict(self) -> dict:
-        """Representacion plana, util para volcar a un DataFrame/CSV de resultados."""
+    @property
+    def confusion_matrix(self) -> tuple[tuple[int, int], tuple[int, int]]:
+        """Devuelve la matriz en el orden [[TN, FP], [FN, TP]]."""
+        return (
+            (self.true_negatives, self.false_positives),
+            (self.false_negatives, self.true_positives),
+        )
+
+    def as_dict(self) -> dict[str, str | int | float | None]:
+        """Devuelve una representación plana apta para CSV."""
         return {
-            "modelo": self.name,
-            "umbral": self.threshold,
-            "accuracy": self.accuracy,
-            "precision": self.precision,
-            "recall": self.recall,
-            "f1": self.f1_score,
-            "f2": self.f2_score,
-            "especificidad": self.specificity,
-            "mcc": self.mcc,
-            "roc_auc": self.roc_auc,
-            "pr_auc": self.pr_auc,
-            "vp": self.true_positives,
-            "fp": self.false_positives,
-            "vn": self.true_negatives,
-            "fn": self.false_negatives,
-            "falsas_alertas_10k_legit": self.false_alerts_per_10k_legit,
-            "monto_fraude_capturado_pct": self.captured_fraud_amount_pct,
+            "Modelo": self.name,
+            "Umbral": self.threshold,
+            "Accuracy": self.accuracy,
+            "Balanced Accuracy": self.balanced_accuracy,
+            "Precision": self.precision,
+            "Recall": self.recall,
+            "Especificidad": self.specificity,
+            "F1": self.f1_score,
+            "F2": self.f2_score,
+            "ROC-AUC": self.roc_auc,
+            "PR-AUC": self.pr_auc,
+            "MCC": self.mcc,
+            "TP": self.true_positives,
+            "FP": self.false_positives,
+            "FN": self.false_negatives,
+            "TN": self.true_negatives,
+            "Falsas alertas / 10.000 legítimas": self.false_alerts_per_10k_legit,
+            "Monto de fraude capturado (%)": self.captured_fraud_amount_pct,
         }
 
 
 class F2ThresholdSelector:
-    """Selecciona el umbral de decision que maximiza F2 sobre un conjunto de validacion.
-
-    Se usa F2 (en vez de F1) porque en deteccion de fraude omitir un fraude real
-    (falso negativo) suele ser mas costoso que revisar una alerta que resulta ser
-    legitima (falso positivo); F2 pondera el recall con el doble de peso que la
-    precision.
-    """
+    """Selecciona el umbral que maximiza F2 en validación."""
 
     def select(self, y_true: np.ndarray, scores: np.ndarray) -> ThresholdSelectionResult:
-        y_true = np.asarray(y_true)
-        scores = np.asarray(scores)
+        labels, values = _validated_vectors(y_true, scores)
+        if set(np.unique(labels)) != {0, 1}:
+            raise ValueError("La selección de umbral requiere ambas clases")
 
-        precision, recall, thresholds = precision_recall_curve(y_true, scores)
-        precision, recall = precision[:-1], recall[:-1]
-
+        precision, recall, thresholds = precision_recall_curve(labels, values)
+        precision = precision[:-1]
+        recall = recall[:-1]
         denominator = 4 * precision + recall
         f2 = np.divide(
             5 * precision * recall,
@@ -96,17 +123,14 @@ class F2ThresholdSelector:
             out=np.zeros_like(precision),
             where=denominator > 0,
         )
-
-        if len(f2) == 0:
-            raise ValueError("No hay umbrales candidatos: revisa y_true/scores")
-
-        best_idx = int(np.argmax(f2))
-
+        if thresholds.size == 0:
+            raise ValueError("No hay umbrales candidatos")
+        best_index = int(np.nanargmax(f2))
         return ThresholdSelectionResult(
-            threshold=float(thresholds[best_idx]),
-            f2_score=float(f2[best_idx]),
-            precision_at_threshold=float(precision[best_idx]),
-            recall_at_threshold=float(recall[best_idx]),
+            threshold=float(thresholds[best_index]),
+            f2_score=float(f2[best_index]),
+            precision_at_threshold=float(precision[best_index]),
+            recall_at_threshold=float(recall[best_index]),
             precision_curve=precision,
             recall_curve=recall,
             thresholds_curve=thresholds,
@@ -114,7 +138,7 @@ class F2ThresholdSelector:
 
 
 class ModelEvaluator:
-    """Calcula metricas de clasificacion para un modelo a un umbral de decision fijo."""
+    """Evalúa puntuaciones sin modificar el umbral seleccionado."""
 
     def evaluate(
         self,
@@ -124,61 +148,69 @@ class ModelEvaluator:
         threshold: float,
         amounts: np.ndarray | None = None,
     ) -> EvaluationMetrics:
-        y_true = np.asarray(y_true)
-        scores = np.asarray(scores)
-        predictions = (scores >= threshold).astype(int)
+        labels, values = _validated_vectors(y_true, scores)
+        if not np.isfinite(threshold):
+            raise ValueError("threshold debe ser finito")
 
-        tn, fp, fn, tp = confusion_matrix(y_true, predictions, labels=[0, 1]).ravel()
-
-        precision = precision_score(y_true, predictions, zero_division=0)
-        recall = recall_score(y_true, predictions, zero_division=0)
-        f1 = f1_score(y_true, predictions, zero_division=0)
-        f2 = self._fbeta(precision, recall, beta=2)
-        accuracy = (tp + tn) / len(y_true) if len(y_true) > 0 else 0.0
-        specificity = tn / (tn + fp) if (tn + fp) > 0 else 0.0
-        mcc = matthews_corrcoef(y_true, predictions)
-
-        has_both_classes = len(np.unique(y_true)) > 1
-        roc_auc = roc_auc_score(y_true, scores) if has_both_classes else float("nan")
-        pr_auc = average_precision_score(y_true, scores) if has_both_classes else float("nan")
-
-        false_alerts_per_10k = (fp / (tn + fp) * 10_000) if (tn + fp) > 0 else 0.0
-
-        captured_pct = None
+        transaction_amounts = None
         if amounts is not None:
-            amounts = np.asarray(amounts)
-            fraud_mask = y_true == 1
-            detected_mask = fraud_mask & (predictions == 1)
-            total_fraud_amount = amounts[fraud_mask].sum()
-            captured_pct = (
-                float(amounts[detected_mask].sum() / total_fraud_amount * 100)
-                if total_fraud_amount > 0
-                else 0.0
-            )
+            transaction_amounts = np.asarray(amounts, dtype=float)
+            if transaction_amounts.ndim != 1 or transaction_amounts.shape != labels.shape:
+                raise ValueError("amounts debe tener la misma longitud que y_true")
+            if not np.isfinite(transaction_amounts).all():
+                raise ValueError("amounts contiene valores no finitos")
+
+        predictions = (values >= threshold).astype(np.int32)
+        tn, fp, fn, tp = confusion_matrix(labels, predictions, labels=[0, 1]).ravel()
+        has_both_classes = np.unique(labels).size == 2
+        balanced_accuracy = (
+            balanced_accuracy_score(labels, predictions)
+            if has_both_classes
+            else float(np.mean(labels == predictions))
+        )
+        mcc = matthews_corrcoef(labels, predictions) if has_both_classes else 0.0
+        captured_percentage = self._captured_amount(
+            labels,
+            predictions,
+            transaction_amounts,
+        )
 
         return EvaluationMetrics(
             name=name,
             threshold=float(threshold),
-            accuracy=float(accuracy),
-            precision=float(precision),
-            recall=float(recall),
-            f1_score=float(f1),
-            f2_score=float(f2),
-            specificity=float(specificity),
+            accuracy=float(accuracy_score(labels, predictions)),
+            balanced_accuracy=float(balanced_accuracy),
+            precision=float(precision_score(labels, predictions, zero_division=0)),
+            recall=float(recall_score(labels, predictions, zero_division=0)),
+            specificity=float(tn / (tn + fp)) if tn + fp else 0.0,
+            f1_score=float(f1_score(labels, predictions, zero_division=0)),
+            f2_score=float(fbeta_score(labels, predictions, beta=2, zero_division=0)),
+            roc_auc=float(roc_auc_score(labels, values)) if has_both_classes else float("nan"),
+            pr_auc=(
+                float(average_precision_score(labels, values))
+                if has_both_classes
+                else float("nan")
+            ),
             mcc=float(mcc),
-            roc_auc=float(roc_auc),
-            pr_auc=float(pr_auc),
             true_positives=int(tp),
             false_positives=int(fp),
-            true_negatives=int(tn),
             false_negatives=int(fn),
-            false_alerts_per_10k_legit=float(false_alerts_per_10k),
-            captured_fraud_amount_pct=captured_pct,
+            true_negatives=int(tn),
+            false_alerts_per_10k_legit=float(fp / (tn + fp) * 10_000) if tn + fp else 0.0,
+            captured_fraud_amount_pct=captured_percentage,
         )
 
     @staticmethod
-    def _fbeta(precision: float, recall: float, *, beta: int) -> float:
-        denominator = (beta ** 2) * precision + recall
-        if denominator == 0:
+    def _captured_amount(
+        labels: np.ndarray,
+        predictions: np.ndarray,
+        amounts: np.ndarray | None,
+    ) -> float | None:
+        if amounts is None:
+            return None
+        fraud_mask = labels == 1
+        total = amounts[fraud_mask].sum()
+        if total <= 0:
             return 0.0
-        return (1 + beta ** 2) * precision * recall / denominator
+        captured = amounts[fraud_mask & (predictions == 1)].sum()
+        return float(captured / total * 100)
