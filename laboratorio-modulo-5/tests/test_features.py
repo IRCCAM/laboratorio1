@@ -1,88 +1,62 @@
 import numpy as np
-import pandas as pd
+import pytest
+from sklearn.exceptions import NotFittedError
 
 from laboratorio1.features import FraudPreprocessor
 
 
-def create_test_dataframe(n_rows=10):
-    return pd.DataFrame(
-        {
-            **{f"V{i}": np.random.randn(n_rows) for i in range(1, 29)},
-            "Time": np.arange(n_rows) * 3600,
-            "Amount": np.linspace(10, 100, n_rows),
-            "Class": np.arange(n_rows) % 2,
-        }
-    )
-
-
-def test_preprocessor_generates_32_features():
-    df = create_test_dataframe()
-
-    preprocessor = FraudPreprocessor()
-    X = preprocessor.fit_transform(df)
-
-    assert X.shape == (10, 32)
-
-def test_feature_engineering_calculates_new_variables():
-    df = create_test_dataframe()
-
-    preprocessor = FraudPreprocessor()
-    features = preprocessor.create_features(df)
-
-    # Verificar LogAmount
-    expected_log_amount = np.log1p(df["Amount"].clip(lower=0))
-
-    assert np.allclose(
-        features["LogAmount"],
-        expected_log_amount
-    )
-
-    # Verificar HourSin y HourCos
-    expected_hour = (df["Time"] % 86400) / 3600.0
-
-    expected_hour_sin = np.sin(
-        2 * np.pi * expected_hour / 24.0
-    )
-
-    expected_hour_cos = np.cos(
-        2 * np.pi * expected_hour / 24.0
-    )
-
-    assert np.allclose(
-        features["HourSin"],
-        expected_hour_sin
-    )
-
-    assert np.allclose(
-        features["HourCos"],
-        expected_hour_cos
-    )
-
-def test_preprocessor_returns_float32():
-    df = create_test_dataframe()
-
-    preprocessor = FraudPreprocessor()
-    X = preprocessor.fit_transform(df)
-
-    assert X.dtype == np.float32
-
-def test_process_splits_returns_correct_shapes():
-    train_df = create_test_dataframe(10)
-    val_df = create_test_dataframe(5)
-    test_df = create_test_dataframe(5)
-
+def test_preprocessor_generates_ordered_float32_features(transactions_factory):
+    dataframe = transactions_factory(10)
     preprocessor = FraudPreprocessor()
 
-    X_train, X_val, X_test = preprocessor.process_splits(
-        train_df,
-        val_df,
-        test_df,
+    features = preprocessor.fit_transform(dataframe)
+
+    assert features.shape == (10, 32)
+    assert features.dtype == np.float32
+    assert FraudPreprocessor.FEATURE_NAMES == (
+        *(f"V{i}" for i in range(1, 29)),
+        "Time",
+        "LogAmount",
+        "HourSin",
+        "HourCos",
     )
 
-    assert X_train.shape == (10, 32)
-    assert X_val.shape == (5, 32)
-    assert X_test.shape == (5, 32)
 
-    assert X_train.dtype == np.float32
-    assert X_val.dtype == np.float32
-    assert X_test.dtype == np.float32
+def test_feature_engineering_matches_notebook_formulas(transactions_factory):
+    dataframe = transactions_factory(10)
+    engineered = FraudPreprocessor().create_features(dataframe)
+    hour = (dataframe["Time"] % 86_400) / 3_600.0
+
+    assert np.allclose(engineered["LogAmount"], np.log1p(dataframe["Amount"]))
+    assert np.allclose(engineered["HourSin"], np.sin(2 * np.pi * hour / 24))
+    assert np.allclose(engineered["HourCos"], np.cos(2 * np.pi * hour / 24))
+
+
+def test_validation_and_test_do_not_refit_scaler(transactions_factory):
+    train = transactions_factory(100, seed=1)
+    validation = transactions_factory(30, seed=2).assign(Amount=1_000_000.0)
+    test = transactions_factory(30, seed=3).assign(Time=9_999_999.0)
+    preprocessor = FraudPreprocessor()
+
+    preprocessor.fit(train)
+    center_before = preprocessor.scaler.center_.copy()
+    scale_before = preprocessor.scaler.scale_.copy()
+    preprocessor.transform(validation)
+    preprocessor.transform(test)
+
+    assert np.array_equal(preprocessor.scaler.center_, center_before)
+    assert np.array_equal(preprocessor.scaler.scale_, scale_before)
+
+
+def test_transform_rejects_unfitted_preprocessor(transactions_factory):
+    with pytest.raises(NotFittedError, match="ajustarse"):
+        FraudPreprocessor().transform(transactions_factory())
+
+
+def test_preprocessor_rejects_missing_or_empty_input(transactions_factory):
+    preprocessor = FraudPreprocessor()
+
+    with pytest.raises(ValueError, match="Faltan variables"):
+        preprocessor.fit(transactions_factory().drop(columns="Amount"))
+    with pytest.raises(ValueError, match="vacías"):
+        preprocessor.fit(transactions_factory().iloc[0:0])

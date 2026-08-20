@@ -12,8 +12,7 @@ python-dotenv
 ruff
 scikit-learn
 joblib
-# En Google Colab TensorFlow ya viene instalado. En local, instalar una version
-# compatible con la version de Python y el hardware del equipo.
+tensorflow>=2.16,<2.21
 dvc[gdrive]==3.67.1
 asyncssh==2.23.1
 pyOpenSSL==24.2.1
