@@ -45,3 +45,17 @@ def test_model_architectures_match_notebook():
     assert autoencoder.input_shape == (None, 32)
     assert autoencoder.output_shape == (None, 32)
     assert autoencoder.get_layer("bottleneck_6").units == 6
+
+
+def test_mlp_keeps_notebook_architecture():
+    """Verifica que la MLP conserve la arquitectura del notebook original."""
+    pytest.importorskip("tensorflow")
+
+    model = build_mlp(input_dim=32, output_bias=-1.0)
+
+    assert model.get_layer("dense_64").units == 64
+    assert model.get_layer("dense_32").units == 32
+    assert model.get_layer("dense_16").units == 16
+    assert model.get_layer("dropout_025").rate == pytest.approx(0.25)
+    assert model.get_layer("dropout_015").rate == pytest.approx(0.15)
+    assert model.get_layer("fraud_probability").activation.__name__ == "sigmoid"
