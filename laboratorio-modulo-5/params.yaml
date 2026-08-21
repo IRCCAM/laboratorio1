@@ -22,3 +22,9 @@ autoencoder:
   early_stopping_patience: 5
   reduce_lr_patience: 2
   min_learning_rate: 0.000001
+
+mlflow:
+  enabled: true
+  tracking_uri: sqlite:///mlflow.db
+  experiment_name: deteccion_fraude
+  log_models: true

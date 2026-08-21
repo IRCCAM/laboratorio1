@@ -48,6 +48,38 @@ pesados se transfieren con DVC.
 La primera autenticación contra Google Drive puede abrir el navegador. Las
 credenciales generadas por DVC son locales y no deben agregarse al repositorio.
 
+## Seguimiento de experimentos con MLflow
+
+MLflow complementa el pipeline DVC: DVC reproduce las etapas y versiona los
+artefactos pesados, mientras MLflow registra una corrida para la MLP y otra para
+el autoencoder. Cada corrida contiene hiperparámetros, métricas finales, firma
+de entrada, modelo Keras y trazabilidad mediante hashes de Git, DVC y dataset.
+
+La etapa `track_mlflow` se ejecuta después de `evaluate` como parte de:
+
+```bash
+dvc repro
+```
+
+El backend local se configura en `params.yaml` y utiliza `mlflow.db`; los
+artefactos de los runs se guardan en `mlartifacts/`. Ambos son locales y están
+excluidos de Git y DVC. Para abrir la interfaz:
+
+```bash
+python -m mlflow server --backend-store-uri sqlite:///mlflow.db \
+  --default-artifact-root ./mlartifacts --port 5000
+```
+
+Luego visita `http://127.0.0.1:5000`. Si se recuperaron modelos con `dvc pull`
+pero no existen runs locales, se puede reconstruir el tracking sin reentrenar:
+
+```bash
+python -m laboratorio1.tracking
+```
+
+Esta configuración local es apropiada para desarrollo individual. Un equipo
+debe sustituir `mlflow.tracking_uri` por la URL de un Tracking Server compartido.
+
 ## Project Organization
 
 ```

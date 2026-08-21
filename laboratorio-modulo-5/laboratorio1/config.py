@@ -57,6 +57,16 @@ class AutoencoderConfig:
 
 
 @dataclass(frozen=True)
+class MLflowConfig:
+    """Configuración del seguimiento local de experimentos."""
+
+    enabled: bool = True
+    tracking_uri: str = "sqlite:///mlflow.db"
+    experiment_name: str = "deteccion_fraude"
+    log_models: bool = True
+
+
+@dataclass(frozen=True)
 class ArtifactPaths:
     """Rutas de los artefactos producidos por el entrenamiento."""
 

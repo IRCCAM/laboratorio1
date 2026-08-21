@@ -15,6 +15,7 @@ def test_pipeline_parameters_load_all_sections(tmp_path):
                 "split": {"validation_size": 0.2, "test_size": 0.1, "seed": 7},
                 "mlp": {"epochs": 3},
                 "autoencoder": {"epochs": 4},
+                "mlflow": {"experiment_name": "test_fraud"},
             }
         ),
         encoding="utf-8",
@@ -29,6 +30,7 @@ def test_pipeline_parameters_load_all_sections(tmp_path):
     }
     assert parameters.mlp.epochs == 3
     assert parameters.autoencoder.epochs == 4
+    assert parameters.mlflow.experiment_name == "test_fraud"
 
 
 def test_pipeline_parameters_reject_invalid_split(tmp_path):
@@ -39,6 +41,7 @@ def test_pipeline_parameters_reject_invalid_split(tmp_path):
                 "split": {"validation_size": 0.6, "test_size": 0.4},
                 "mlp": {},
                 "autoencoder": {},
+                "mlflow": {},
             }
         ),
         encoding="utf-8",
