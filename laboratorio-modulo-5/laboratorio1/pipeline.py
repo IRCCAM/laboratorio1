@@ -23,6 +23,7 @@ from laboratorio1.config import (
     PROCESSED_DATA_DIR,
     RAW_DATA_DIR,
     AutoencoderConfig,
+    MLflowConfig,
     MLPConfig,
     SplitConfig,
 )
@@ -46,6 +47,7 @@ class PipelineParameters:
     split: SplitConfig
     mlp: MLPConfig
     autoencoder: AutoencoderConfig
+    mlflow: MLflowConfig
 
     @classmethod
     def load(cls, path: str | Path = PARAMS_PATH) -> PipelineParameters:
@@ -54,7 +56,7 @@ class PipelineParameters:
         raw = yaml.safe_load(params_path.read_text(encoding="utf-8"))
         if not isinstance(raw, dict):
             raise TypeError("params.yaml debe contener un objeto YAML")
-        missing = {"split", "mlp", "autoencoder"} - set(raw)
+        missing = {"split", "mlp", "autoencoder", "mlflow"} - set(raw)
         if missing:
             raise ValueError(f"Faltan secciones en params.yaml: {sorted(missing)}")
         try:
@@ -62,6 +64,7 @@ class PipelineParameters:
                 split=SplitConfig(**raw["split"]),
                 mlp=MLPConfig(**raw["mlp"]),
                 autoencoder=AutoencoderConfig(**raw["autoencoder"]),
+                mlflow=MLflowConfig(**raw["mlflow"]),
             )
         except (TypeError, AttributeError) as error:
             raise ValueError(
@@ -86,6 +89,10 @@ class PipelineParameters:
                 raise ValueError(f"Los parámetros principales de {name} deben ser positivos")
             if config.prediction_batch_size <= 0:
                 raise ValueError(f"{name}.prediction_batch_size debe ser positivo")
+        if not self.mlflow.tracking_uri:
+            raise ValueError("mlflow.tracking_uri no puede estar vacío")
+        if not self.mlflow.experiment_name:
+            raise ValueError("mlflow.experiment_name no puede estar vacío")
 
 
 @dataclass(frozen=True)

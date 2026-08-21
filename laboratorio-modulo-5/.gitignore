@@ -186,3 +186,10 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# Local MLflow tracking store and artifacts
+mlflow.db
+mlflow.db-shm
+mlflow.db-wal
+mlruns/
+mlartifacts/

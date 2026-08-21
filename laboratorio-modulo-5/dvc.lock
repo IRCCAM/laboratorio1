@@ -9,8 +9,8 @@ stages:
       size: 150828752
     - path: laboratorio1/config.py
       hash: md5
-      md5: fa1e91d8c6c7992543074d50e71a9ca7
-      size: 2112
+      md5: 4b4488c6e5f103ffa025e4f6e2f5aeac
+      size: 2368
     - path: laboratorio1/dataset.py
       hash: md5
       md5: d5d0ef37e459b2b7b9059b4b64797110
@@ -21,8 +21,8 @@ stages:
       size: 3545
     - path: laboratorio1/pipeline.py
       hash: md5
-      md5: bd97f53dd05eb89dd4101db1c2dcc8c7
-      size: 14035
+      md5: 82283ce9a62364f706a438497a8c7077
+      size: 14378
     params:
       params.yaml:
         split:
@@ -47,8 +47,8 @@ stages:
       size: 33334023
     - path: laboratorio1/config.py
       hash: md5
-      md5: fa1e91d8c6c7992543074d50e71a9ca7
-      size: 2112
+      md5: 4b4488c6e5f103ffa025e4f6e2f5aeac
+      size: 2368
     - path: laboratorio1/modeling/models.py
       hash: md5
       md5: 434e381a122169db03f51e3ffbfbe9ed
@@ -59,8 +59,8 @@ stages:
       size: 11191
     - path: laboratorio1/pipeline.py
       hash: md5
-      md5: bd97f53dd05eb89dd4101db1c2dcc8c7
-      size: 14035
+      md5: 82283ce9a62364f706a438497a8c7077
+      size: 14378
     params:
       params.yaml:
         mlp:
@@ -76,7 +76,7 @@ stages:
     outs:
     - path: models/modelo_mlp_fraude.keras
       hash: md5
-      md5: 6b4cf48f1493f2491e2f2bb758a0525f
+      md5: 89997c39dcbe3716b747175b0c9c1cbc
       size: 112139
   train_autoencoder:
     cmd: python -m laboratorio1.pipeline train-autoencoder
@@ -87,8 +87,8 @@ stages:
       size: 33334023
     - path: laboratorio1/config.py
       hash: md5
-      md5: fa1e91d8c6c7992543074d50e71a9ca7
-      size: 2112
+      md5: 4b4488c6e5f103ffa025e4f6e2f5aeac
+      size: 2368
     - path: laboratorio1/modeling/models.py
       hash: md5
       md5: 434e381a122169db03f51e3ffbfbe9ed
@@ -99,8 +99,8 @@ stages:
       size: 11191
     - path: laboratorio1/pipeline.py
       hash: md5
-      md5: bd97f53dd05eb89dd4101db1c2dcc8c7
-      size: 14035
+      md5: 82283ce9a62364f706a438497a8c7077
+      size: 14378
     params:
       params.yaml:
         autoencoder:
@@ -116,7 +116,7 @@ stages:
     outs:
     - path: models/modelo_autoencoder_fraude.keras
       hash: md5
-      md5: d72c5b13f2ea3f67c3438adedad8b3fe
+      md5: fd01ff9da97d92bed77b273c83b56893
       size: 74661
   evaluate:
     cmd: python -m laboratorio1.pipeline evaluate
@@ -127,8 +127,8 @@ stages:
       size: 33334023
     - path: laboratorio1/config.py
       hash: md5
-      md5: fa1e91d8c6c7992543074d50e71a9ca7
-      size: 2112
+      md5: 4b4488c6e5f103ffa025e4f6e2f5aeac
+      size: 2368
     - path: laboratorio1/evaluation.py
       hash: md5
       md5: 807ae91fd5439318ef79a68d343a594f
@@ -139,15 +139,15 @@ stages:
       size: 5578
     - path: laboratorio1/pipeline.py
       hash: md5
-      md5: bd97f53dd05eb89dd4101db1c2dcc8c7
-      size: 14035
+      md5: 82283ce9a62364f706a438497a8c7077
+      size: 14378
     - path: models/modelo_autoencoder_fraude.keras
       hash: md5
-      md5: d72c5b13f2ea3f67c3438adedad8b3fe
+      md5: fd01ff9da97d92bed77b273c83b56893
       size: 74661
     - path: models/modelo_mlp_fraude.keras
       hash: md5
-      md5: 6b4cf48f1493f2491e2f2bb758a0525f
+      md5: 89997c39dcbe3716b747175b0c9c1cbc
       size: 112139
     params:
       params.yaml:
@@ -168,5 +168,77 @@ stages:
       size: 1206
     - path: reports/results/proveniencia_reproducibilidad.json
       hash: md5
-      md5: ad026780f41567c42745188624f93e7c
+      md5: c210a2685cb198971742c145492c37a5
       size: 1050
+  track_mlflow:
+    cmd: python -m laboratorio1.tracking
+    deps:
+    - path: data/processed/fraud_splits.npz
+      hash: md5
+      md5: 2a496ebd85317c9f09f69c227104b6db
+      size: 33334023
+    - path: laboratorio1/config.py
+      hash: md5
+      md5: 4b4488c6e5f103ffa025e4f6e2f5aeac
+      size: 2368
+    - path: laboratorio1/pipeline.py
+      hash: md5
+      md5: 82283ce9a62364f706a438497a8c7077
+      size: 14378
+    - path: laboratorio1/tracking.py
+      hash: md5
+      md5: 60d7a4c28913e35ab831066efd19d161
+      size: 8917
+    - path: models/modelo_autoencoder_fraude.keras
+      hash: md5
+      md5: fd01ff9da97d92bed77b273c83b56893
+      size: 74661
+    - path: models/modelo_mlp_fraude.keras
+      hash: md5
+      md5: 89997c39dcbe3716b747175b0c9c1cbc
+      size: 112139
+    - path: models/umbrales_decision.json
+      hash: md5
+      md5: 795a6e05a76de0c79104729292120e04
+      size: 129
+    - path: reports/results/metricas_modelos.csv
+      hash: md5
+      md5: 82ece626f42ce15b2a1731b795beb2f3
+      size: 758
+    - path: reports/results/metricas_modelos.json
+      hash: md5
+      md5: 32eb4a5f9b13c343fedacc5bea0f1c9f
+      size: 1206
+    - path: reports/results/proveniencia_reproducibilidad.json
+      hash: md5
+      md5: c210a2685cb198971742c145492c37a5
+      size: 1050
+    params:
+      params.yaml:
+        autoencoder:
+          learning_rate: 0.001
+          noise_stddev: 0.02
+          epochs: 40
+          batch_size: 2048
+          prediction_batch_size: 4096
+          early_stopping_patience: 5
+          reduce_lr_patience: 2
+          min_learning_rate: 1e-06
+        mlflow:
+          enabled: true
+          tracking_uri: sqlite:///mlflow.db
+          experiment_name: deteccion_fraude
+          log_models: true
+        mlp:
+          learning_rate: 0.001
+          l2_regularization: 0.0001
+          epochs: 30
+          batch_size: 2048
+          prediction_batch_size: 4096
+          early_stopping_patience: 5
+          reduce_lr_patience: 2
+          min_learning_rate: 1e-06
+        split:
+          validation_size: 0.15
+          test_size: 0.15
+          seed: 42

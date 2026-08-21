@@ -61,3 +61,22 @@ stages:
     metrics:
       - reports/results/metricas_modelos.json:
           cache: false
+
+  track_mlflow:
+    cmd: python -m laboratorio1.tracking
+    deps:
+      - data/processed/fraud_splits.npz
+      - models/modelo_mlp_fraude.keras
+      - models/modelo_autoencoder_fraude.keras
+      - models/umbrales_decision.json
+      - reports/results/metricas_modelos.json
+      - reports/results/metricas_modelos.csv
+      - reports/results/proveniencia_reproducibilidad.json
+      - laboratorio1/config.py
+      - laboratorio1/pipeline.py
+      - laboratorio1/tracking.py
+    params:
+      - split
+      - mlp
+      - autoencoder
+      - mlflow

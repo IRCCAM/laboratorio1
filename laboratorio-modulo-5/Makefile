@@ -65,6 +65,12 @@ dvc-pull:
 	dvc pull
 
 
+## Start the local MLflow tracking server and UI
+.PHONY: mlflow-ui
+mlflow-ui:
+	python -m mlflow server --backend-store-uri sqlite:///mlflow.db --default-artifact-root ./mlartifacts --port 5000
+
+
 ## Set up Python interpreter environment
 .PHONY: create_environment
 create_environment:
