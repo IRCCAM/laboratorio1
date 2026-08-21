@@ -47,6 +47,24 @@ test:
 	python -m pytest tests
 
 
+## Reproduce the complete DVC pipeline
+.PHONY: pipeline
+pipeline:
+	dvc repro
+
+
+## Upload DVC-tracked data and pipeline outputs to Google Drive
+.PHONY: dvc-push
+dvc-push:
+	dvc push
+
+
+## Download DVC-tracked data and pipeline outputs from Google Drive
+.PHONY: dvc-pull
+dvc-pull:
+	dvc pull
+
+
 ## Set up Python interpreter environment
 .PHONY: create_environment
 create_environment:
