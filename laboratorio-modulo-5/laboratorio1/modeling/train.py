@@ -95,13 +95,13 @@ class FraudTrainingPipeline:
         test_labels = labels[indices.test]
         test_amounts = dataframe.iloc[indices.test]["Amount"].to_numpy(dtype=float)
 
-        mlp = self._train_mlp(
+        mlp = self.train_mlp(
             train_features,
             train_labels,
             validation_features,
             validation_labels,
         )
-        autoencoder = self._train_autoencoder(
+        autoencoder = self.train_autoencoder(
             train_features,
             train_labels,
             validation_features,
@@ -186,7 +186,7 @@ class FraudTrainingPipeline:
         except RuntimeError:
             logger.warning("TensorFlow no pudo activar operaciones deterministas")
 
-    def _train_mlp(
+    def train_mlp(
         self,
         train_features: np.ndarray,
         train_labels: np.ndarray,
@@ -227,7 +227,7 @@ class FraudTrainingPipeline:
         )
         return model
 
-    def _train_autoencoder(
+    def train_autoencoder(
         self,
         train_features: np.ndarray,
         train_labels: np.ndarray,

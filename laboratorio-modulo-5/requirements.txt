@@ -9,6 +9,7 @@ pandas
 pip
 pytest
 python-dotenv
+PyYAML>=6.0,<7
 ruff
 scikit-learn
 joblib

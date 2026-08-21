@@ -6,6 +6,48 @@
 
 laboratorio 1. modulo 5
 
+## Pipeline reproducible con DVC
+
+El proyecto usa Git para versionar código y configuración, y DVC para reproducir
+el entrenamiento y almacenar datasets y artefactos pesados en Google Drive. El
+remoto predeterminado está declarado como `gdrive_remote` en `.dvc/config`.
+
+El grafo de `dvc.yaml` contiene cuatro etapas:
+
+1. `prepare`: valida el dataset, crea la partición estratificada y ajusta el
+   preprocesador únicamente con entrenamiento.
+2. `train_mlp`: entrena la red supervisada sensible al costo.
+3. `train_autoencoder`: entrena el detector de anomalías solo con operaciones
+   legítimas.
+4. `evaluate`: selecciona umbrales con validación y calcula las métricas finales
+   una sola vez sobre test.
+
+Después de instalar las dependencias, el flujo habitual es:
+
+```bash
+# Recuperar el dataset y artefactos disponibles desde Google Drive
+dvc pull
+
+# Ejecutar solamente las etapas nuevas o afectadas por cambios
+dvc repro
+
+# Consultar y comparar las métricas declaradas en dvc.yaml
+dvc metrics show
+dvc metrics diff
+
+# Sincronizar los nuevos artefactos pesados con Google Drive
+dvc push
+```
+
+Los hiperparámetros se modifican en `params.yaml`. Por ejemplo, cambiar
+`mlp.epochs` invalida `train_mlp` y `evaluate`, pero no vuelve a preparar los
+datos ni a entrenar el autoencoder. Se deben registrar en Git `params.yaml`,
+`dvc.yaml`, `dvc.lock`, el código y los archivos `.gitignore`; los contenidos
+pesados se transfieren con DVC.
+
+La primera autenticación contra Google Drive puede abrir el navegador. Las
+credenciales generadas por DVC son locales y no deben agregarse al repositorio.
+
 ## Project Organization
 
 ```

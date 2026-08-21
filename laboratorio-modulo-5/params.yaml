@@ -1,0 +1,24 @@
+split:
+  validation_size: 0.15
+  test_size: 0.15
+  seed: 42
+
+mlp:
+  learning_rate: 0.001
+  l2_regularization: 0.0001
+  epochs: 30
+  batch_size: 2048
+  prediction_batch_size: 4096
+  early_stopping_patience: 5
+  reduce_lr_patience: 2
+  min_learning_rate: 0.000001
+
+autoencoder:
+  learning_rate: 0.001
+  noise_stddev: 0.02
+  epochs: 40
+  batch_size: 2048
+  prediction_batch_size: 4096
+  early_stopping_patience: 5
+  reduce_lr_patience: 2
+  min_learning_rate: 0.000001

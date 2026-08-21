@@ -1,0 +1,63 @@
+stages:
+  prepare:
+    cmd: python -m laboratorio1.pipeline prepare
+    deps:
+      - data/raw/creditcard.csv
+      - laboratorio1/config.py
+      - laboratorio1/dataset.py
+      - laboratorio1/features.py
+      - laboratorio1/pipeline.py
+    params:
+      - split
+    outs:
+      - data/processed/fraud_splits.npz
+      - models/preprocesador_fraude.joblib
+
+  train_mlp:
+    cmd: python -m laboratorio1.pipeline train-mlp
+    deps:
+      - data/processed/fraud_splits.npz
+      - laboratorio1/config.py
+      - laboratorio1/modeling/models.py
+      - laboratorio1/modeling/train.py
+      - laboratorio1/pipeline.py
+    params:
+      - split.seed
+      - mlp
+    outs:
+      - models/modelo_mlp_fraude.keras
+
+  train_autoencoder:
+    cmd: python -m laboratorio1.pipeline train-autoencoder
+    deps:
+      - data/processed/fraud_splits.npz
+      - laboratorio1/config.py
+      - laboratorio1/modeling/models.py
+      - laboratorio1/modeling/train.py
+      - laboratorio1/pipeline.py
+    params:
+      - split.seed
+      - autoencoder
+    outs:
+      - models/modelo_autoencoder_fraude.keras
+
+  evaluate:
+    cmd: python -m laboratorio1.pipeline evaluate
+    deps:
+      - data/processed/fraud_splits.npz
+      - models/modelo_mlp_fraude.keras
+      - models/modelo_autoencoder_fraude.keras
+      - laboratorio1/config.py
+      - laboratorio1/evaluation.py
+      - laboratorio1/modeling/models.py
+      - laboratorio1/pipeline.py
+    params:
+      - mlp.prediction_batch_size
+      - autoencoder.prediction_batch_size
+    outs:
+      - models/umbrales_decision.json
+      - reports/results/proveniencia_reproducibilidad.json
+      - reports/results/metricas_modelos.csv
+    metrics:
+      - reports/results/metricas_modelos.json:
+          cache: false
