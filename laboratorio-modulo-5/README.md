@@ -6,6 +6,62 @@
 
 laboratorio 1. modulo 5
 
+## API local con FastAPI
+
+La API carga al iniciar únicamente el modelo MLP de Keras, el preprocesador y su
+umbral desde el directorio local `models/`. Primero recupera o genera los artefactos y luego
+inicia el servidor:
+
+```bash
+cd laboratorio-modulo-5
+dvc pull
+uvicorn app:app --reload --host 127.0.0.1 --port 8000
+```
+
+La documentación interactiva queda disponible en `http://127.0.0.1:8000/docs`.
+`GET /health` confirma que los artefactos se cargaron y `POST /predict` acepta
+un objeto `data` con una o más transacciones. Cada transacción debe incluir
+`Time`, `Amount` y las variables `V1` a `V28`:
+
+```json
+{
+  "data": [
+    {
+      "Time": 0,
+      "Amount": 149.62,
+      "V1": -1.3598,
+      "V2": -0.0728,
+      "V3": 2.5363,
+      "V4": 1.3782,
+      "V5": -0.3383,
+      "V6": 0.4624,
+      "V7": 0.2396,
+      "V8": 0.0987,
+      "V9": 0.3638,
+      "V10": 0.0908,
+      "V11": -0.5516,
+      "V12": -0.6178,
+      "V13": -0.9914,
+      "V14": -0.3112,
+      "V15": 1.4682,
+      "V16": -0.4704,
+      "V17": 0.208,
+      "V18": 0.0258,
+      "V19": 0.404,
+      "V20": 0.2514,
+      "V21": -0.0183,
+      "V22": 0.2778,
+      "V23": -0.1105,
+      "V24": 0.0669,
+      "V25": 0.1285,
+      "V26": -0.1891,
+      "V27": 0.1336,
+      "V28": -0.0211
+    }
+  ]
+}
+```
+
 ## Pipeline reproducible con DVC
 
 El proyecto usa Git para versionar código y configuración, y DVC para reproducir
@@ -100,7 +156,7 @@ debe sustituir `mlflow.tracking_uri` por la URL de un Tracking Server compartido
 │                         the creator's initials, and a short `-` delimited description, e.g.
 │                         `1.0-jqp-initial-data-exploration`.
 │
-├── pyproject.toml     <- Project configuration file with package metadata for 
+├── pyproject.toml     <- Project configuration file with package metadata for
 │                         laboratorio1 and configuration for tools like black
 │
 ├── references         <- Data dictionaries, manuals, and all other explanatory materials.
@@ -123,13 +179,12 @@ debe sustituir `mlflow.tracking_uri` por la URL de un Tracking Server compartido
     │
     ├── features.py             <- Code to create features for modeling
     │
-    ├── modeling                
-    │   ├── __init__.py 
-    │   ├── predict.py          <- Code to run model inference with trained models          
+    ├── modeling
+    │   ├── __init__.py
+    │   ├── predict.py          <- Code to run model inference with trained models
     │   └── train.py            <- Code to train models
     │
     └── plots.py                <- Code to create visualizations
 ```
 
---------
-
+---

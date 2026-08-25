@@ -25,6 +25,56 @@ class PredictionModel(Protocol):
     def predict(self, features: np.ndarray, **kwargs: object) -> np.ndarray: ...
 
 
+class MLPFraudDetectionService:
+    """Aplica el preprocesamiento y únicamente el detector MLP supervisado."""
+
+    def __init__(
+        self,
+        preprocessor: FraudPreprocessor,
+        model: PredictionModel,
+        threshold: float,
+    ) -> None:
+        if not np.isfinite(threshold):
+            raise ValueError("El umbral debe ser finito")
+        self.preprocessor = preprocessor
+        self.model = model
+        self.threshold = float(threshold)
+
+    @classmethod
+    def from_artifacts(
+        cls,
+        artifact_paths: ArtifactPaths = ARTIFACT_PATHS,
+    ) -> MLPFraudDetectionService:
+        """Carga del disco sólo los artefactos necesarios para la MLP."""
+        import tensorflow as tf
+
+        preprocessor = joblib.load(artifact_paths.preprocessor)
+        if not isinstance(preprocessor, FraudPreprocessor):
+            raise TypeError("El artefacto no contiene un FraudPreprocessor")
+        thresholds = json.loads(artifact_paths.thresholds.read_text(encoding="utf-8"))
+        if "mlp" not in thresholds:
+            raise ValueError("Falta el umbral requerido para la MLP")
+        return cls(
+            preprocessor=preprocessor,
+            model=tf.keras.models.load_model(artifact_paths.mlp_model),
+            threshold=thresholds["mlp"],
+        )
+
+    def predict(self, transactions: pd.DataFrame) -> pd.DataFrame:
+        """Devuelve la probabilidad y la alerta de fraude de la MLP."""
+        features = self.preprocessor.transform(transactions)
+        scores = np.asarray(self.model.predict(features, verbose=0)).ravel()
+        if scores.shape != (len(transactions),):
+            raise ValueError("La MLP devolvió una cantidad inesperada de predicciones")
+        return pd.DataFrame(
+            {
+                "probabilidad_fraude": scores,
+                "alerta_fraude": (scores >= self.threshold).astype(np.int32),
+            },
+            index=transactions.index,
+        )
+
+
 class FraudDetectionService:
     """Aplica el preprocesamiento y ambos detectores con umbrales persistidos."""
 
