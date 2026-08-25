@@ -7,7 +7,7 @@ import pytest
 
 from laboratorio1.config import ArtifactPaths
 from laboratorio1.features import FraudPreprocessor
-from laboratorio1.modeling.predict import FraudDetectionService
+from laboratorio1.modeling.predict import FraudDetectionService, MLPFraudDetectionService
 
 
 class ScoreModel:
@@ -88,3 +88,42 @@ def test_service_loads_training_artifacts(
 
     assert isinstance(service.preprocessor, FraudPreprocessor)
     assert service.thresholds == {"mlp": 0.5, "autoencoder": 0.3}
+
+
+@pytest.mark.filterwarnings("ignore:Setting the shape on a NumPy array:DeprecationWarning")
+def test_mlp_service_loads_only_the_supervised_model(
+    tmp_path,
+    monkeypatch,
+    transactions_factory,
+):
+    model_dir = tmp_path / "models"
+    result_dir = tmp_path / "results"
+    paths = ArtifactPaths(
+        mlp_model=model_dir / "mlp.keras",
+        autoencoder_model=model_dir / "autoencoder.keras",
+        preprocessor=model_dir / "preprocessor.joblib",
+        thresholds=model_dir / "thresholds.json",
+        metrics=result_dir / "metrics.csv",
+        provenance=result_dir / "provenance.json",
+    )
+    model_dir.mkdir()
+    joblib.dump(FraudPreprocessor().fit(transactions_factory()), paths.preprocessor)
+    paths.thresholds.write_text(
+        json.dumps({"mlp": 0.5, "autoencoder": 0.3}),
+        encoding="utf-8",
+    )
+    paths.mlp_model.touch()
+    loaded_paths = []
+    fake_tensorflow = SimpleNamespace(
+        keras=SimpleNamespace(
+            models=SimpleNamespace(
+                load_model=lambda path: loaded_paths.append(path) or ScoreModel()
+            )
+        )
+    )
+    monkeypatch.setitem(__import__("sys").modules, "tensorflow", fake_tensorflow)
+
+    service = MLPFraudDetectionService.from_artifacts(paths)
+
+    assert service.threshold == 0.5
+    assert loaded_paths == [paths.mlp_model]
