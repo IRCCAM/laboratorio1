@@ -6,22 +6,28 @@
 
 laboratorio 1. modulo 5
 
-## API local con FastAPI
+## FastAPI local con el MLP en Docker
 
-La API carga al iniciar únicamente el modelo MLP de Keras, el preprocesador y su
-umbral desde el directorio local `models/`. Primero recupera o genera los artefactos y luego
-inicia el servidor:
+FastAPI se ejecuta localmente; la API no se dockeriza. Al iniciar, carga desde
+`models/` únicamente el preprocesador y el umbral de decisión. La inferencia se
+delega al contenedor del modelo MLP mediante `GET /health` y `POST /invocations`,
+el contrato HTTP estándar de MLflow.
 
-```bash
-cd laboratorio-modulo-5
+Primero debe estar ejecutándose el contenedor MLP del equipo y publicar su
+puerto de inferencia como `8080` en la computadora. Luego, en PowerShell:
+
+```powershell
+cd C:\Modulo5\laboratorio1\laboratorio-modulo-5
 dvc pull
-uvicorn app:app --reload --host 127.0.0.1 --port 8000
+$env:MLP_SERVICE_URL = "http://127.0.0.1:8080"
+$env:MLP_SERVICE_TIMEOUT_SECONDS = "10"
+.\.venv\Scripts\python.exe -m uvicorn app:app --reload --host 127.0.0.1 --port 8000
 ```
 
 La documentación interactiva queda disponible en `http://127.0.0.1:8000/docs`.
-`GET /health` confirma que los artefactos se cargaron y `POST /predict` acepta
-un objeto `data` con una o más transacciones. Cada transacción debe incluir
-`Time`, `Amount` y las variables `V1` a `V28`:
+`GET /health` confirma que FastAPI puede comunicarse con el contenedor y
+`POST /predict` acepta un objeto `data` con una o más transacciones. Cada
+transacción debe incluir `Time`, `Amount` y las variables `V1` a `V28`:
 
 ```json
 {
@@ -132,6 +138,14 @@ pero no existen runs locales, se puede reconstruir el tracking sin reentrenar:
 ```bash
 python -m laboratorio1.tracking
 ```
+
+El puerto `5000` corresponde al seguimiento y la interfaz de MLflow. La
+inferencia consumida por FastAPI es un servicio separado que el contenedor MLP
+publica en el puerto `8080`.
+
+El modelo del contenedor, el preprocesador y el umbral deben proceder de la
+misma ejecución de DVC/MLflow; mezclar versiones puede producir predicciones
+incorrectas aunque ambos servicios respondan correctamente.
 
 Esta configuración local es apropiada para desarrollo individual. Un equipo
 debe sustituir `mlflow.tracking_uri` por la URL de un Tracking Server compartido.
