@@ -1,0 +1,9 @@
+services:
+  mlp-model:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: fraude-mlp:latest
+    container_name: fraude-mlp
+    ports:
+      - "8080:8080"

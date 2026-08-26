@@ -12,9 +12,14 @@ data/raw/
 data/interim/
 data/processed/
 
+models/*
+!models/modelo_mlp_fraude.keras
+
 notebooks/
 docs/
 references/
+
+tests/
 
 reports/figures/
 reports/results/
