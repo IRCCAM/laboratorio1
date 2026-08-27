@@ -71,6 +71,12 @@ mlflow-ui:
 	python -m mlflow server --backend-store-uri sqlite:///mlflow.db --default-artifact-root ./mlartifacts --port 5000
 
 
+## Register the best MLP run in MLflow Model Registry
+.PHONY: mlflow-register
+mlflow-register:
+	python -m laboratorio1.registry
+
+
 ## Set up Python interpreter environment
 .PHONY: create_environment
 create_environment:

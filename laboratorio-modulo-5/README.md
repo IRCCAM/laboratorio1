@@ -157,6 +157,18 @@ El puerto `5000` corresponde al seguimiento y la interfaz de MLflow. La
 inferencia consumida por FastAPI es un servicio separado que el contenedor MLP
 publica en el puerto `8080`.
 
+Después de comparar las corridas, la mejor MLP se promueve explícitamente al
+Model Registry. El comando selecciona la corrida MLP finalizada con mayor F2,
+registra el modelo como `deteccion_fraude_mlp` y asigna el alias `champion`:
+
+```powershell
+.\.venv\Scripts\python.exe -m laboratorio1.registry
+```
+
+La operación es idempotente para el mismo archivo Keras: si su huella SHA-256
+ya está registrada, reutiliza esa versión en lugar de crear un duplicado. No
+vuelve a entrenar los modelos ni crea corridas adicionales.
+
 El modelo del contenedor, el preprocesador y el umbral deben proceder de la
 misma ejecución de DVC/MLflow; mezclar versiones puede producir predicciones
 incorrectas aunque ambos servicios respondan correctamente.
