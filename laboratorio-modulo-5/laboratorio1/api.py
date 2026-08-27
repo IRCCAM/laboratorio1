@@ -186,9 +186,7 @@ def create_app(
         try:
             import pandas as pd
 
-            transactions = pd.DataFrame(
-                [transaction.model_dump() for transaction in payload.data]
-            )
+            transactions = pd.DataFrame([transaction.model_dump() for transaction in payload.data])
             prediction_frame = service.predict(transactions).reset_index(drop=True)
             results = [
                 PredictionResult(

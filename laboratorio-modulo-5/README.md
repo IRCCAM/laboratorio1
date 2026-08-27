@@ -13,12 +13,20 @@ FastAPI se ejecuta localmente; la API no se dockeriza. Al iniciar, carga desde
 delega al contenedor del modelo MLP mediante `GET /health` y `POST /invocations`,
 el contrato HTTP estándar de MLflow.
 
-Primero debe estar ejecutándose el contenedor MLP del equipo y publicar su
-puerto de inferencia como `8080` en la computadora. Luego, en PowerShell:
+Primero se recupera el modelo versionado con DVC y se construye el contenedor
+que publica únicamente el MLP en el puerto `8080`:
 
 ```powershell
 cd C:\Modulo5\laboratorio1\laboratorio-modulo-5
-dvc pull
+.\.venv\Scripts\python.exe -m dvc pull
+docker compose up --build mlp-model
+```
+
+Cuando la terminal muestre que MLflow escucha en `0.0.0.0:8080`, se abre una
+segunda terminal de PowerShell para iniciar FastAPI localmente:
+
+```powershell
+cd C:\Modulo5\laboratorio1\laboratorio-modulo-5
 $env:MLP_SERVICE_URL = "http://127.0.0.1:8080"
 $env:MLP_SERVICE_TIMEOUT_SECONDS = "10"
 .\.venv\Scripts\python.exe -m uvicorn app:app --reload --host 127.0.0.1 --port 8000
@@ -66,6 +74,12 @@ transacción debe incluir `Time`, `Amount` y las variables `V1` a `V28`:
     }
   ]
 }
+```
+
+Para detener solamente el contenedor MLP al finalizar:
+
+```powershell
+docker compose down
 ```
 
 ## Pipeline reproducible con DVC
@@ -142,6 +156,18 @@ python -m laboratorio1.tracking
 El puerto `5000` corresponde al seguimiento y la interfaz de MLflow. La
 inferencia consumida por FastAPI es un servicio separado que el contenedor MLP
 publica en el puerto `8080`.
+
+Después de comparar las corridas, la mejor MLP se promueve explícitamente al
+Model Registry. El comando selecciona la corrida MLP finalizada con mayor F2,
+registra el modelo como `deteccion_fraude_mlp` y asigna el alias `champion`:
+
+```powershell
+.\.venv\Scripts\python.exe -m laboratorio1.registry
+```
+
+La operación es idempotente para el mismo archivo Keras: si su huella SHA-256
+ya está registrada, reutiliza esa versión en lugar de crear un duplicado. No
+vuelve a entrenar los modelos ni crea corridas adicionales.
 
 El modelo del contenedor, el preprocesador y el umbral deben proceder de la
 misma ejecución de DVC/MLflow; mezclar versiones puede producir predicciones
