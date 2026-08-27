@@ -90,9 +90,7 @@ class RemoteMLPFraudDetectionService:
             try:
                 timeout_seconds = float(raw_timeout)
             except ValueError as error:
-                raise ValueError(
-                    "MLP_SERVICE_TIMEOUT_SECONDS debe ser un número"
-                ) from error
+                raise ValueError("MLP_SERVICE_TIMEOUT_SECONDS debe ser un número") from error
 
         return cls(
             preprocessor=preprocessor,
